@@ -82,7 +82,20 @@ class BaseController extends AbstractController
     public function index()
     {
         $service = new \App\Service\CoinService();
-        return $service->address(Coin::ETH, Protocol::ETH);
+        // newAddress
+        // return $service->newAddress(Coin::ETH, Protocol::ETH);
+
+        // balance
+        $address = '0x64AECA120dfCE9Df383EA0582f25248FCA638CA3';
+        // return $service->balance($address, Coin::ETH, Protocol::ETH);
+        return $service->balance($address, Coin::USDT, Protocol::ETH);
+
+        // transfer
+        // $from = '0x5eA1cAB2e6b49796EE0454A6131998B67aF596D5';
+        // $to = '0x63f3f4618d1add951344b269d22c9d736451302a';
+        // $number = '0.1';
+        // return $service->transfer($from,$to,$number, Coin::USDT, Protocol::ETH);
+        // return $service->transfer($from,$to,$number, Coin::ETH, Protocol::ETH);
     }
 
 }

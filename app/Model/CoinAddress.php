@@ -6,6 +6,7 @@ namespace App\Model;
 /**
  * @property string $address 
  * @property string $key 
+ * @property string $mnemonic 
  * @property int $protocol 
  */
 class CoinAddress extends Model

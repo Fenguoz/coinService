@@ -3,7 +3,6 @@
 namespace Driver\Coin;
 
 use App\Constants\ErrorCode;
-use App\Exception\BusinessException;
 
 class CoinFactory
 {
@@ -19,11 +18,11 @@ class CoinFactory
 	public function setAdapter(string $adapterName, array $adapterConfig = [])
 	{
 		if (empty($adapterName))
-			throw new BusinessException(ErrorCode::ADAPTER_EMPTY);
+			throw new CoinException(ErrorCode::ADAPTER_EMPTY);
 
 		$class_file = BASE_PATH . '/app/Library/Driver/Coin/' . $adapterName . '/Service.php';
 		if (!file_exists($class_file))
-			throw new BusinessException(ErrorCode::FILE_NOT_FOUND);
+			throw new CoinException(ErrorCode::FILE_NOT_FOUND);
 
 		$class = "\Driver\Coin\\$adapterName\Service";
 		$this->adapter_instance = new $class($adapterConfig);
