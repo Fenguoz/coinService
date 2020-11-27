@@ -71,9 +71,9 @@ class BaseController extends AbstractController
         // return $service->newAddress(Coin::ETH, Protocol::ETH);
 
         // balance
-        $address = '0x64AECA120dfCE9Df383EA0582f25248FCA638CA3';
+        // $address = '0x64AECA120dfCE9Df383EA0582f25248FCA638CA3';
         // return $service->balance($address, Coin::ETH, Protocol::ETH);
-        return $service->balance($address, Coin::USDT, Protocol::ETH);
+        // return $service->balance($address, Coin::USDT, Protocol::ETH);
 
         // transfer
         // $from = '0x5eA1cAB2e6b49796EE0454A6131998B67aF596D5';
@@ -81,6 +81,12 @@ class BaseController extends AbstractController
         // $number = '0.1';
         // return $service->transfer($from,$to,$number, Coin::USDT, Protocol::ETH);
         // return $service->transfer($from,$to,$number, Coin::ETH, Protocol::ETH);
+
+        // return $service->blockNumber(Coin::USDT, Protocol::ETH);
+
+        // $txHash = '0x9dcc648804b3f05dade94e60808faef45800d70cca6a5e41bfa8c0388cb7518f';
+        // return $service->transactionReceipt($txHash, Coin::USDT, Protocol::ETH);
+        // return $service->receiptStatus($txHash, Coin::USDT, Protocol::ETH);
     }
 
 }

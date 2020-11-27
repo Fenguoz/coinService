@@ -17,7 +17,7 @@ abstract class AbstractService
 
 	public function _notify($data = null)
 	{
-		return $data ? $data : (($this->code == 0) ? true : false);
+		return $data;
 	}
 
 	/* 获取新地址接口 */

@@ -96,4 +96,62 @@ class CoinService extends BaseService implements CoinServiceInterface
 
         return $this->success($txHash);
     }
+
+    /**
+     * Returns the number of the latest block
+     *
+     * @param int   $coin       Coin code
+     * @param int   $protocol   Chian protocol
+     * @return string
+     */
+    public function blockNumber(int $coin, int $protocol)
+    {
+        if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
+        try {
+            $number = $this->coin->setAdapter(Protocol::$__names[$protocol], CoinChainConfig::getConfigByCode(Coin::$__names[$coin], $protocol))->blockNumber();
+        } catch (CoinException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        }
+        return $this->success($number);
+    }
+
+    /**
+     * Returns the receipt of the specified transaction, using the hash to specify 
+     * the transaction.
+     *
+     * @param string $txHash    Transaction hash
+     * @param int   $coin       Coin code
+     * @param int   $protocol   Chian protocol
+     * @return array
+     */
+    public function transactionReceipt(string $txHash, int $coin, int $protocol)
+    {
+        if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
+        try {
+            $number = $this->coin->setAdapter(Protocol::$__names[$protocol], CoinChainConfig::getConfigByCode(Coin::$__names[$coin], $protocol))->transactionReceipt($txHash);
+        } catch (CoinException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        }
+        return $this->success($number);
+    }
+
+    /**
+     * Returns the status of the receipt of the specified transaction, using the hash 
+     * to specify the transaction.
+     *
+     * @param string $txHash    Transaction hash
+     * @param int   $coin       Coin code
+     * @param int   $protocol   Chian protocol
+     * @return array
+     */
+    public function receiptStatus(string $txHash, int $coin, int $protocol)
+    {
+        if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
+        try {
+            $number = $this->coin->setAdapter(Protocol::$__names[$protocol], CoinChainConfig::getConfigByCode(Coin::$__names[$coin], $protocol))->receiptStatus($txHash);
+        } catch (CoinException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        }
+        return $this->success($number);
+    }
 }
