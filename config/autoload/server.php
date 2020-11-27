@@ -15,16 +15,16 @@ use Hyperf\Server\SwooleEvent;
 return [
     'mode' => SWOOLE_PROCESS,
     'servers' => [
-        [
-            'name' => 'http',
-            'type' => Server::SERVER_HTTP,
-            'host' => '0.0.0.0',
-            'port' => 9501,
-            'sock_type' => SWOOLE_SOCK_TCP,
-            'callbacks' => [
-                SwooleEvent::ON_REQUEST => [Hyperf\HttpServer\Server::class, 'onRequest'],
-            ],
-        ],
+        // [
+        //     'name' => 'http',
+        //     'type' => Server::SERVER_HTTP,
+        //     'host' => '0.0.0.0',
+        //     'port' => 9501,
+        //     'sock_type' => SWOOLE_SOCK_TCP,
+        //     'callbacks' => [
+        //         SwooleEvent::ON_REQUEST => [Hyperf\HttpServer\Server::class, 'onRequest'],
+        //     ],
+        // ],
         [
             'name' => 'jsonrpc-http',
             'type' => Server::SERVER_HTTP,

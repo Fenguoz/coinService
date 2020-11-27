@@ -11,22 +11,7 @@ use App\Constants\Protocol;
 use Hyperf\Guzzle\ClientFactory;
 use Hyperf\Redis\RedisFactory;
 use Psr\Container\ContainerInterface;
-use OpenApi\Annotations\Info;
-use OpenApi\Annotations\Server;
 
-/**
- * @Info(
- *     version="1.0",
- *     title="钱包服务",
- * ),
- * @Server(
- *     url="http://127.0.0.1:9501",
- *     description="本地环境"
- * )
- */
-/**
- * @Controller()
- */
 class BaseController extends AbstractController
 {
 
