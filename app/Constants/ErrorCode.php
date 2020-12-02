@@ -24,6 +24,7 @@ use Hyperf\Constants\Annotation\Constants;
  * 商品，3****
  * 订单，4****
  * 钱包，5****
+ * 钱包-币种，50***
  * 钱包-账单，51***
  * 钱包-支付，52***
  * 业务，6****
@@ -67,4 +68,14 @@ class ErrorCode extends AbstractConstants
      * @Message("ADAPTER_TURN_OFF")
      */
     const ADAPTER_TURN_OFF = 12001;
+
+    /**
+     * @Message("WAIT_RECEIPT")
+     */
+    const WAIT_RECEIPT = 50000;
+
+    /**
+     * @Message("CONFIRM_NOT_ENOUGHT")
+     */
+    const CONFIRM_NOT_ENOUGHT = 50001;
 }

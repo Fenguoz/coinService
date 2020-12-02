@@ -97,11 +97,13 @@ class Service extends AbstractService
         $blockNumberLatest = $this->blockNumber($txHash);
         $confirms = $blockNumberLatest - $blockNumber + 1;
 
-        $bool = false;
-        if ($status == 1 && $this->config['confirm'] <= $confirms) {
-            $bool = true;
-        }
-        return $this->_notify($bool);
+        if ($status == 0)
+            return $this->error(ErrorCode::WAIT_RECEIPT);
+
+        if ($this->config['confirm'] > $confirms)
+            return $this->error(ErrorCode::CONFIRM_NOT_ENOUGHT);
+
+        return $this->_notify(true);
     }
 
     public function _return()
