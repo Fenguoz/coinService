@@ -41,7 +41,8 @@
         "mockery/mockery": "^1.0",
         "phpstan/phpstan": "^0.12",
         "hyperf/devtool": "~2.0.0",
-        "hyperf/testing": "~2.0.0"
+        "hyperf/testing": "~2.0.0",
+        "hyperf/watcher": "^2.0"
     },
     "suggest": {
         "ext-openssl": "Required to use HTTPS.",

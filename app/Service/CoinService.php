@@ -150,4 +150,23 @@ class CoinService extends BaseService implements CoinServiceInterface
         }
         return $this->success($ret);
     }
+
+    /**
+     * Returns a block of the specified number.
+     *
+     * @param int       $blockNumber    Block number
+     * @param string    $coin           Coin code
+     * @param int       $protocol       Chian protocol
+     * @return bool
+     */
+    public function blockByNumber(int $blockNumber, string $coin, int $protocol)
+    {
+        if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
+        try {
+            $ret = $this->coin->setAdapter(Protocol::$__names[$protocol], CoinChainConfig::getConfigByCode($coin, $protocol))->blockByNumber($blockNumber);
+        } catch (CoinException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        }
+        return $this->success($ret);
+    }
 }
