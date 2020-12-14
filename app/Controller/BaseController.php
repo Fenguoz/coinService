@@ -11,6 +11,9 @@ use App\Constants\Protocol;
 use Hyperf\Guzzle\ClientFactory;
 use Hyperf\Redis\RedisFactory;
 use Psr\Container\ContainerInterface;
+use Hyperf\Utils\ApplicationContext;
+use Hyperf\Task\TaskExecutor;
+use Hyperf\Task\Task;
 
 class BaseController extends AbstractController
 {
@@ -71,9 +74,9 @@ class BaseController extends AbstractController
         // return $service->newAddress(Coin::ETH, Protocol::ETH);
 
         // balance
-        // $address = '0x64AECA120dfCE9Df383EA0582f25248FCA638CA3';
+        // $address = '0x63f3f4618d1add951344b269d22c9d736451302a';
         // return $service->balance($address, Coin::ETH, Protocol::ETH);
-        // return $service->balance($address, Coin::USDT, Protocol::ETH);
+        // return $service->balance($address, 'USDT', Protocol::ETH);
 
         // transfer
         // $from = '0x5eA1cAB2e6b49796EE0454A6131998B67aF596D5';
@@ -84,16 +87,22 @@ class BaseController extends AbstractController
 
         // return $service->blockNumber('USDT', Protocol::ETH);
 
-        // $txHash = '0x9dcc648804b3f05dade94e60808faef45800d70cca6a5e41bfa8c0388cb7518f';
-        // return $service->transactionReceipt($txHash, Coin::USDT, Protocol::ETH);
-        // return $service->receiptStatus($txHash, Coin::USDT, Protocol::ETH);
+        // $txHash = '0xfe0ed5db1061e691eb85e836a88570e5810a492d807180296eef99a015706938';
+        // return $service->transactionReceipt($txHash, 'USDT', Protocol::ETH);
+        // return $service->receiptStatus($txHash, 'USDT', Protocol::ETH);
 
 
         // $blockNumer = 11384670;
-        $blockNumer = 11339155;
-        $data = $service->blockByNumber($blockNumer, 'USDT', Protocol::ETH);
+        // $blockNumer = 11339155;
+        // $data = $service->blockByNumber($blockNumer, 'USDT', Protocol::ETH);
 
-        var_dump($data);
-        return $data;
+        // var_dump($data);
+        // return $data;
+
+        $container = ApplicationContext::getContainer();
+        $exec = $container->get(TaskExecutor::class);
+        $result = $exec->execute(new Task([\App\Task\ETHFundsCollection::class, 'execute']));
+        echo $result;
+        // return $this->success($result);
     }
 }

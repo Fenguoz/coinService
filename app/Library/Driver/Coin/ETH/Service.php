@@ -54,6 +54,8 @@ class Service extends AbstractService
 
     public function balance(string $address)
     {
+        echo $this->config['coin_name'];
+
         if ($this->config['coin_name'] == 'ETH') {
             $number = $this->eth->ethBalance($address, $this->config['decimals']);
         } else { //ERC20
@@ -62,13 +64,13 @@ class Service extends AbstractService
         return $this->_notify($number);
     }
 
-    public function transfer(string $from, string $to, string $number)
+    public function transfer(string $from, string $to, string $number, string $txSpeed = null)
     {
         $data = $this->eth->transfer(
             $from,
             $to,
             $number,
-            $this->config['tx_speed'],
+            $txSpeed ?? $this->config['tx_speed'],
             $this->config['decimals']
         );
         if (!$data)
@@ -100,13 +102,15 @@ class Service extends AbstractService
         $blockNumberLatest = $this->blockNumber($txHash);
         $confirms = $blockNumberLatest - $blockNumber + 1;
 
-        if ($status == 0)
-            return $this->error(ErrorCode::WAIT_RECEIPT);
+        // if ($status == 0)
+        //     return $this->error(ErrorCode::WAIT_RECEIPT);
 
-        if ($this->config['confirm'] > $confirms)
-            return $this->error(ErrorCode::CONFIRM_NOT_ENOUGHT);
+        // if ($this->config['confirm'] > $confirms)
+        //     return $this->error(ErrorCode::CONFIRM_NOT_ENOUGHT);
 
-        return $this->_notify(true);
+        if ($this->config['confirm'] > $confirms) $status = -1;
+
+        return $this->_notify($status);
     }
 
     public function blockByNumber(int $blockNumber, $isRebuild = true)

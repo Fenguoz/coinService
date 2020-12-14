@@ -67,14 +67,15 @@ class CoinService extends BaseService implements CoinServiceInterface
      * @param int   $protocol   Chian protocol
      * @return array
      */
-    public function transfer(string $from, string $to, string $number, string $coin, int $protocol)
+    public function transfer(string $from, string $to, string $amount, string $coin, int $protocol, string $txSpeed = null)
     {
         if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
         $key = CoinAddress::where('address', $from)->value('key');
-        if (!$key) return $this->error(ErrorCode::DATA_NOT_EXIST);
+        // if (!$key) return $this->error(ErrorCode::DATA_NOT_EXIST);
+        if (!$key) $key = $from;
 
         try {
-            $txHash = $this->coin->setAdapter(Protocol::$__names[$protocol], CoinChainConfig::getConfigByCode($coin, $protocol))->transfer($key, $to, $number);
+            $txHash = $this->coin->setAdapter(Protocol::$__names[$protocol], CoinChainConfig::getConfigByCode($coin, $protocol))->transfer($key, $to, $amount, $txSpeed);
         } catch (CoinException $e) {
             return $this->error($e->getCode(), $e->getMessage());
         }
@@ -85,7 +86,7 @@ class CoinService extends BaseService implements CoinServiceInterface
             'to' => $to,
             'protocol' => $protocol,
             'coin' => $coin,
-            'number' => $number,
+            'amount' => $amount,
         ]);
         if (!$result)
             throw new BusinessException(ErrorCode::ADD_ERROR);
