@@ -25,7 +25,7 @@ abstract class AbstractService
 	/* 获取余额接口 */
 	abstract public function balance(string $address);
 	/* 发起转账接口 */
-	abstract public function transfer(string $from, string $to, string $number);
+	abstract public function transfer(string $from, string $to, string $amount, string $fromPrivateKey);
 	/* 同步通知接口 */
 	abstract public function _return();
 	/* 异步通知接口 */

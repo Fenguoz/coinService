@@ -8,7 +8,7 @@ interface CoinServiceInterface
 
     public function balance(string $address, string $coin, int $protocol);
 
-    public function transfer(string $from, string $to, string $number, string $coin, int $protocol);
+    public function transfer(string $from, string $to, string $amount, string $coin, int $protocol);
 
     public function blockNumber(string $coin, int $protocol);
 

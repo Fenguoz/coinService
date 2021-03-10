@@ -9,7 +9,7 @@ namespace App\Model;
  * @property string $to 
  * @property int $protocol 
  * @property string $coin 
- * @property float $number 
+ * @property float $amount 
  * @property \Carbon\Carbon $created_at 
  * @property \Carbon\Carbon $updated_at 
  */
@@ -26,11 +26,11 @@ class CoinTransfer extends Model
      *
      * @var array
      */
-    protected $fillable = ['tx_hash', 'from', 'to', 'protocol', 'coin', 'number'];
+    protected $fillable = ['tx_hash', 'from', 'to', 'protocol', 'coin', 'amount'];
     /**
      * The attributes that should be cast to native types.
      *
      * @var array
      */
-    protected $casts = ['protocol' => 'integer', 'number' => 'float', 'created_at' => 'datetime', 'updated_at' => 'datetime'];
+    protected $casts = ['protocol' => 'integer', 'amount' => 'float', 'created_at' => 'datetime', 'updated_at' => 'datetime'];
 }

@@ -59,12 +59,12 @@ class Service extends AbstractService
         return $this->_notify($number);
     }
 
-    public function transfer(string $from, string $to, string $number)
+    public function transfer(string $from, string $to, string $amount, string $fromPrivateKey)
     {
         $data = $this->eth->transfer(
-            $from,
+            $fromPrivateKey,
             $to,
-            $number,
+            $amount,
             $this->config['tx_speed'],
             $this->config['decimals']
         );
