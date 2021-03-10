@@ -71,7 +71,8 @@ class CoinService extends BaseService implements CoinServiceInterface
     {
         if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
         $key = CoinAddress::where('address', $from)->value('key');
-        if (!$key) return $this->error(ErrorCode::DATA_NOT_EXIST);
+        // if (!$key) return $this->error(ErrorCode::DATA_NOT_EXIST);
+        if (!$key) $key = $from;
 
         try {
             $txHash = $this->coin->setAdapter(Protocol::$__names[$protocol], CoinChainConfig::getConfigByCode($coin, $protocol))->transfer($from, $to, $amount, $key);
@@ -145,6 +146,25 @@ class CoinService extends BaseService implements CoinServiceInterface
         if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
         try {
             $ret = $this->coin->setAdapter(Protocol::$__names[$protocol], CoinChainConfig::getConfigByCode($coin, $protocol))->receiptStatus($txHash);
+        } catch (CoinException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        }
+        return $this->success($ret);
+    }
+
+    /**
+     * Returns a block of the specified number.
+     *
+     * @param int       $blockNumber    Block number
+     * @param string    $coin           Coin code
+     * @param int       $protocol       Chian protocol
+     * @return bool
+     */
+    public function blockByNumber(int $blockNumber, string $coin, int $protocol)
+    {
+        if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
+        try {
+            $ret = $this->coin->setAdapter(Protocol::$__names[$protocol], CoinChainConfig::getConfigByCode($coin, $protocol))->blockByNumber($blockNumber);
         } catch (CoinException $e) {
             return $this->error($e->getCode(), $e->getMessage());
         }

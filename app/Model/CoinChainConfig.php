@@ -10,9 +10,12 @@ namespace App\Model;
  * @property string $rpc_user 
  * @property string $rpc_password 
  * @property string $contract_address 
- * @property int $confirm 
  * @property int $decimals 
  * @property string $tx_speed 
+ * @property int $confirm 
+ * @property float $funds_collection_min_amount 
+ * @property string $recv_address 
+ * @property string $send_address 
  */
 class CoinChainConfig extends Model
 {
@@ -33,7 +36,7 @@ class CoinChainConfig extends Model
      *
      * @var array
      */
-    protected $casts = ['protocol' => 'integer', 'confirm' => 'integer', 'decimals' => 'integer'];
+    protected $casts = ['protocol' => 'integer', 'decimals' => 'integer', 'confirm' => 'integer', 'funds_collection_min_amount' => 'float'];
     public static function getConfigByCode(string $coin, int $protocol) : array
     {
         $config = self::query()->where('coin_name', $coin)->where('protocol', $protocol)->first();

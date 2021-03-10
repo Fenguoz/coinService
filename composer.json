@@ -35,7 +35,9 @@
         "hyperf/amqp": "~2.0.0",
         "nanqi/ethereum-php": "^0.1.0",
         "bitwasp/bitcoin": "^1.0",
-        "fenguoz/tron-php": "^0.1.0"
+        "fenguoz/tron-php": "^0.1.0",
+        "hyperf/crontab": "^2.0",
+        "hyperf/task": "^2.0"
     },
     "require-dev": {
         "swoole/ide-helper": "^4.5",
@@ -43,7 +45,8 @@
         "mockery/mockery": "^1.0",
         "phpstan/phpstan": "^0.12",
         "hyperf/devtool": "~2.0.0",
-        "hyperf/testing": "~2.0.0"
+        "hyperf/testing": "~2.0.0",
+        "hyperf/watcher": "^2.0"
     },
     "suggest": {
         "ext-openssl": "Required to use HTTPS.",

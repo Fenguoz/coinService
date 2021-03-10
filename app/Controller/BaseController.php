@@ -10,6 +10,9 @@ use App\Constants\Protocol;
 use Hyperf\Guzzle\ClientFactory;
 use Hyperf\Redis\RedisFactory;
 use Psr\Container\ContainerInterface;
+use Hyperf\Utils\ApplicationContext;
+use Hyperf\Task\TaskExecutor;
+use Hyperf\Task\Task;
 
 class BaseController extends AbstractController
 {
@@ -72,7 +75,7 @@ class BaseController extends AbstractController
         // return $service->newAddress('FUSDT', Protocol::TRX);
 
         // balance
-        // $address = '0x64AECA120dfCE9Df383EA0582f25248FCA638CA3';
+        // $address = '0x63f3f4618d1add951344b269d22c9d736451302a';
         // return $service->balance($address, Coin::ETH, Protocol::ETH);
         // return $service->balance($address, Coin::USDT, Protocol::ETH);
         // $address = '14GvTBTVb5cTuEiC4zVXvpkKjGgDWkyB55';
@@ -105,6 +108,14 @@ class BaseController extends AbstractController
         $txHash = 'a931f589ebe1182ef74d53957971273f51e3755739358066ec883dfb21c49a9b';//trx20
         return $service->transactionReceipt($txHash, 'FUSDT', Protocol::TRX);
         // return $service->receiptStatus($txHash, 'FUSDT', Protocol::TRX);
-    }
 
+        // var_dump($data);
+        // return $data;
+
+        // $container = ApplicationContext::getContainer();
+        // $exec = $container->get(TaskExecutor::class);
+        // $result = $exec->execute(new Task([\App\Task\ETHFundsCollection::class, 'execute']));
+        // echo $result;
+        // return $this->success($result);
+    }
 }

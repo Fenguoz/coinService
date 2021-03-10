@@ -3,6 +3,9 @@
 namespace Driver\Coin\ETH;
 
 use App\Constants\ErrorCode;
+use App\Constants\Protocol;
+use App\Model\CoinAddress;
+use App\Model\CoinChainConfig;
 use Driver\Coin\AbstractService;
 use Ethereum\Wallet;
 use Ethereum\Eth;
@@ -51,6 +54,8 @@ class Service extends AbstractService
 
     public function balance(string $address)
     {
+        echo $this->config['coin_name'];
+
         if ($this->config['coin_name'] == 'ETH') {
             $number = $this->eth->ethBalance($address, $this->config['decimals']);
         } else { //ERC20
@@ -67,6 +72,7 @@ class Service extends AbstractService
             $amount,
             $this->config['tx_speed'],
             $this->config['decimals']
+
         );
         if (!$data)
             return $this->error(ErrorCode::ERR_SERVER);
@@ -97,13 +103,75 @@ class Service extends AbstractService
         $blockNumberLatest = $this->blockNumber($txHash);
         $confirms = $blockNumberLatest - $blockNumber + 1;
 
-        if ($status == 0)
-            return $this->error(ErrorCode::WAIT_RECEIPT);
+        // if ($status == 0)
+        //     return $this->error(ErrorCode::WAIT_RECEIPT);
 
-        if ($this->config['confirm'] > $confirms)
-            return $this->error(ErrorCode::CONFIRM_NOT_ENOUGHT);
+        // if ($this->config['confirm'] > $confirms)
+        //     return $this->error(ErrorCode::CONFIRM_NOT_ENOUGHT);
 
-        return $this->_notify(true);
+        if ($this->config['confirm'] > $confirms) $status = -1;
+
+        return $this->_notify($status);
+    }
+
+    public function blockByNumber(int $blockNumber, $isRebuild = true)
+    {
+        $txData = $this->eth->getBlockByNumber($blockNumber);
+        if (!$txData)
+            return $this->error(ErrorCode::ERR_SERVER);
+        return $this->_notify($isRebuild ? $this->_rebuildTxData($txData) : $txData);
+    }
+
+    public function _rebuildTxData($txData)
+    {
+        $mainCoin = '';
+        $mainCoinDecimals = 0;
+        $contractAddress = [];
+        $contractAddress2coinName = [];
+        $contractAddress2decimals = [];
+
+        $config = CoinChainConfig::where('protocol', Protocol::ETH)->get();
+        foreach ($config as $v) {
+            if ($v->contract_address) {
+                $contractAddress[] = $v->contract_address;
+                $contractAddress2coinName[$v->contract_address] = $v->coin_name;
+                $contractAddress2decimals[$v->contract_address] = $v->decimals;
+            } else {
+                $mainCoin = $v->coin_name;
+                $mainCoinDecimals = $v->decimals;
+            }
+        }
+
+        $transferMethod = '0xa9059cbb';
+        $data = [];
+        foreach ($txData['transactions'] as $v) {
+            $item = [];
+            $item['hash'] = $v['hash'];
+            $item['block'] = Utils::toDisplayAmount($v['blockNumber'], 0);
+            $item['from'] = $v['from'];
+            $item['to'] = $v['to'];
+
+            if ($v['input'] == '0x') { //ETH
+                if (!CoinAddress::where('address', $v['to'])->where('protocol', Protocol::ETH)->exists()) continue;
+
+                $item['coin'] = $mainCoin;
+                $item['amount'] = Utils::toDisplayAmount($v['value'], (int)$mainCoinDecimals);
+            } else { //ERC20
+                if (!in_array($v['to'], $contractAddress)) continue;
+
+                $method = substr($v['input'], 0, 10);
+                if ($transferMethod != $method) continue;
+
+                $item['to'] = '0x' . substr($v['input'], 34, 40);
+                if (!CoinAddress::where('address', $item['to'])->where('protocol', Protocol::ETH)->exists()) continue;
+
+                $item['coin'] = $contractAddress2coinName[$v['to']];
+                $amount = substr($v['input'], 74, 64);
+                $item['amount'] = Utils::toDisplayAmount($amount, (int)$contractAddress2decimals[$v['to']]);
+            }
+            $data[] = $item;
+        }
+        return $data;
     }
 
     public function _return()
