@@ -66,7 +66,13 @@ class Service extends AbstractService
     public function blockNumber()
     {
         $block = $this->wallet->blockNumber();
-        return $this->_notify($block);
+        return $this->_notify($block->block_header['raw_data']['number']);
+    }
+
+    public function blockByNumber(int $blockNumber)
+    {
+        $block = $this->wallet->blockByNumber($blockNumber);
+        return $this->_notify($block->transactions);
     }
 
     public function transactionReceipt(string $txHash)

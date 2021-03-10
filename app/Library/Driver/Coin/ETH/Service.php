@@ -10,7 +10,6 @@ use Driver\Coin\AbstractService;
 use Ethereum\Wallet;
 use Ethereum\Eth;
 use Ethereum\ERC20;
-use Ethereum\InfuraApi;
 use Ethereum\NodeApi;
 use Ethereum\Utils;
 
