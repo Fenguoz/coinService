@@ -37,7 +37,8 @@
         "bitwasp/bitcoin": "^1.0",
         "fenguoz/tron-php": "^0.1.0",
         "hyperf/crontab": "^2.0",
-        "hyperf/task": "^2.0"
+        "hyperf/task": "^2.0",
+        "hyperf/consul": "^2.0"
     },
     "require-dev": {
         "swoole/ide-helper": "^4.5",

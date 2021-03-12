@@ -10,7 +10,7 @@ use Tron\Address;
 use Tron\Exceptions\TransactionException;
 use Tron\Exceptions\TronErrorException;
 use Tron\TRX;
-use Tron\TRX20;
+use Tron\TRC20;
 
 class Service extends AbstractService
 {
@@ -28,7 +28,7 @@ class Service extends AbstractService
         if ($this->config['coin_name'] == 'TRX') {
             $this->wallet = new TRX($api, $this->config);
         } else {
-            $this->wallet = new TRX20($api, $this->config);
+            $this->wallet = new TRC20($api, $this->config);
         }
     }
 
