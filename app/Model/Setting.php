@@ -36,7 +36,6 @@ class Setting extends Model
      * @var array
      */
     protected $casts = [];
-
     /**
      * getList
      * 获取列表

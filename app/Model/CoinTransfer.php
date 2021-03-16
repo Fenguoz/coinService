@@ -35,5 +35,4 @@ class CoinTransfer extends Model
      * @var array
      */
     protected $casts = ['protocol' => 'integer', 'amount' => 'float', 'status' => 'integer', 'created_at' => 'datetime', 'updated_at' => 'datetime'];
-
 }

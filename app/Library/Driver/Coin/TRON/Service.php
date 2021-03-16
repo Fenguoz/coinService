@@ -1,6 +1,6 @@
 <?php
 
-namespace Driver\Coin\TRX;
+namespace Driver\Coin\TRON;
 
 use App\Constants\ErrorCode;
 use Driver\Coin\AbstractService;

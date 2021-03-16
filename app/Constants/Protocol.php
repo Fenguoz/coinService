@@ -8,12 +8,12 @@ final class Protocol
     const BTC = 2;
     const OMNI = 3;
     const EOS = 4;
-    const TRX = 5;
+    const TRON = 5;
     static public $__names = array(
         1 => 'ETH',
         2 => 'BTC',
         3 => 'OMNI',
         4 => 'EOS',
-        5 => 'TRX',
+        5 => 'TRON',
     );
 }

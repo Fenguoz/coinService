@@ -7,7 +7,7 @@ use App\Constants\Setting as ConstantsSetting;
 use App\Model\CoinAddress;
 use App\Model\CoinAddressBlacklist;
 use App\Model\CoinChainConfig;
-use App\Model\CoinEthFundsCollectionFeeLog;
+use App\Model\CoinFundsCollectionLog;
 use App\Model\Setting;
 use App\Service\CoinService;
 use Ethereum\Utils;
@@ -26,9 +26,9 @@ class ETHFundsCollection
 
     public function execute()
     {
-        $this->logger->info(date('Y-m-d H:i:s', time()) . " FundsCollection: start");
+        $this->logger->info(date('Y-m-d H:i:s', time()) . " ETHFundsCollection: start");
         if (config('app_env') == 'dev') {
-            $this->logger->info(date('Y-m-d H:i:s', time()) . " FundsCollection: Done");
+            $this->logger->info(date('Y-m-d H:i:s', time()) . " ETHFundsCollection: Done");
             return true;
         }
 
@@ -38,7 +38,7 @@ class ETHFundsCollection
         $fundsCollectionTxSpeed = $eth['funds_collection_tx_speed'] ?? 'standard'; //归集交易速度
         $gasPrice = self::gasPriceOracle($fundsCollectionTxSpeed);
         if (!$gasPrice || $fundsCollectionGasPrice < $gasPrice) {
-            $this->logger->info(date('Y-m-d H:i:s', time()) . " FundsCollection: gas price high($gasPrice)");
+            $this->logger->info(date('Y-m-d H:i:s', time()) . " ETHFundsCollection: gas price high($gasPrice)");
             return true;
         }
 
@@ -48,6 +48,11 @@ class ETHFundsCollection
         $config = CoinChainConfig::where('protocol', Protocol::ETH)
             ->orderBy('contract_address', 'desc')
             ->get();
+        if($config->isEmpty()){
+            $this->logger->info(date('Y-m-d H:i:s', time()) . " ETHFundsCollection: Not exist protocol(".Protocol::$__names[Protocol::ETH].")");
+            return true;
+        }
+
         $coins = [];
         $coin2minAmount = [];
         $coin2sendAddress = [];
@@ -65,26 +70,34 @@ class ETHFundsCollection
 
         /* 判断上一次归集状态 */
         $address2status = [];
-        $logs = CoinEthFundsCollectionFeeLog::where('status', 0)->get();
+        $logs = CoinFundsCollectionLog::where('status', 0)->where('protocol', Protocol::ETH)->get();
         foreach ($logs as $log) {
             $address2status[$log->address] = 0; //默认0，防止服务失败
             $receiptStatusResult = (new CoinService)->receiptStatus($log->tx_hash, $log->coin_name, Protocol::ETH);
-            if (!$receiptStatusResult || $receiptStatusResult['code'] != 200) continue;
+            if (!$receiptStatusResult || $receiptStatusResult['code'] != 200) {
+                continue;
+            }
 
             $ret = (new CoinService)->balance($log->address, $log->coin_name, Protocol::ETH);
-            if (!$ret || $ret['code'] != 200) continue;
+            if (!$ret || $ret['code'] != 200) {
+                continue;
+            }
 
             $balance = $ret['data'];
-            if ($log->tx_hash == 2 && $receiptStatusResult['data'] == 1 && $balance < $ethFee) {
+            if ($log->type == 2 && $receiptStatusResult['data'] == 1 && $balance < $ethFee) {
                 CoinAddressBlacklist::insert([
                     'protocol' => Protocol::ETH,
                     'address' => $log->address
                 ]);
+
+                continue;
             }
-            $result = CoinEthFundsCollectionFeeLog::where('tx_hash', $log->tx_hash)->update([
+            $result = CoinFundsCollectionLog::where('tx_hash', $log->tx_hash)->update([
                 'status' => $receiptStatusResult['data']
             ]);
-            if (!$result) continue;
+            if (!$result) {
+                continue;
+            }
 
             $address2status[$log->address] = $receiptStatusResult['data'];
         }
@@ -128,68 +141,55 @@ class ETHFundsCollection
 
                     if ($ethFee > $ethBalance) { // Need eth as transaction fee
                         $ethTransferAmount = ($ethFeeSendType == 1) ? $ethFee : bcsub((string)$ethFee, (string)$ethBalance);
-                        var_dump([
-                            'coin_name' => 'ETH',
-                            'amount' => $ethTransferAmount,
-                            'address' => $address,
-                            'type' => 2,
-                        ]);
-
                         $transferResult = (new CoinService)->transfer(
                             $coin2sendAddress[$coin],
                             $address,
                             $ethTransferAmount,
                             'ETH',
-                            Protocol::ETH,
-                            $fundsCollectionTxSpeed
+                            Protocol::ETH
                         );
                         var_dump($transferResult);
                         if (!$transferResult || $transferResult['code'] != 200) {
                             $this->logger->info(date('Y-m-d H:i:s', time()) . "Error: 转账手续费 失败!");
                         }
 
-                        $result = CoinEthFundsCollectionFeeLog::create([
+                        $result = CoinFundsCollectionLog::create([
                             'tx_hash' => $transferResult['data'],
                             'coin_name' => 'ETH',
                             'amount' => $ethTransferAmount,
                             'address' => $address,
                             'type' => 2,
+                            'protocol' => Protocol::ETH
                         ]);
                         if (!$result) {
-                            $this->logger->info(date('Y-m-d H:i:s', time()) . "Error: CoinEthFundsCollectionFeeLog 添加失败!");
+                            $this->logger->info(date('Y-m-d H:i:s', time()) . "Error: CoinFundsCollectionLog 添加失败!");
                         }
                         break; //the user done, next one
                     }
                 }
 
-                var_dump([
-                    'coin_name' => $coin,
-                    'amount' => $transferAmount,
-                    'address' => $address,
-                    'type' => 1,
-                ]);
                 //归集余额
                 $transferResult = (new CoinService)->transfer(
                     $address,
                     $coin2recvAddress[$coin],
                     $transferAmount,
                     $coin,
-                    Protocol::ETH,
-                    $fundsCollectionTxSpeed
+                    Protocol::ETH
                 );
                 if (!$transferResult || $transferResult['code'] != 200) {
                     $this->logger->info(date('Y-m-d H:i:s', time()) . "Error: 转账手续费 失败!");
                 }
 
-                $result = CoinEthFundsCollectionFeeLog::create([
+                $result = CoinFundsCollectionLog::create([
                     'tx_hash' => $transferResult['data'],
                     'coin_name' => $coin,
                     'amount' => $transferAmount,
                     'address' => $address,
                     'type' => 1,
+                    'protocol' => Protocol::ETH
                 ]);
                 if (!$result) {
-                    $this->logger->info(date('Y-m-d H:i:s', time()) . "Error: CoinEthFundsCollectionFeeLog 添加失败!");
+                    $this->logger->info(date('Y-m-d H:i:s', time()) . "Error: CoinFundsCollectionLog 添加失败!");
                 }
             }
         }

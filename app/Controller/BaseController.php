@@ -7,6 +7,8 @@ namespace App\Controller;
 use App\Constants\ErrorCode;
 use App\Constants\Protocol;
 use Hyperf\Guzzle\ClientFactory;
+use Hyperf\HttpServer\Contract\RequestInterface;
+use Hyperf\HttpServer\Contract\ResponseInterface;
 use Hyperf\Redis\RedisFactory;
 use Psr\Container\ContainerInterface;
 use Hyperf\Utils\ApplicationContext;
@@ -17,15 +19,32 @@ class BaseController extends AbstractController
 {
 
     /**
-     * @var ContainerInterfase
+     * @var ContainerInterface
      */
     protected $container;
+
+    /**
+     * @var ClientFactory
+     */
+    protected $client;
+
+    /**
+     * @var RequestInterface
+     */
+    protected $request;
+
+    /**
+     * @var ResponseInterface
+     */
+    protected $response;
 
     public function __construct(ContainerInterface $container)
     {
         $this->container = $container;
         $this->redis = $container->get(RedisFactory::class)->get('default');
         $this->client = $container->get(ClientFactory::class)->create();
+        $this->request = $container->get(RequestInterface::class);
+        $this->response = $container->get(ResponseInterface::class);
     }
 
     /**
@@ -67,39 +86,44 @@ class BaseController extends AbstractController
 
     public function index()
     {
+        $container = ApplicationContext::getContainer();
+        $exec = $container->get(TaskExecutor::class);
+        $result = $exec->execute(new Task([\App\Task\TRONFundsCollection::class, 'execute']));
+        return $this->success($result);
+
+
         $service = new \App\Service\CoinService();
         // newAddress
-        return $service->newAddress('TRX', Protocol::TRX);
+        // return $service->newAddress('TRX', Protocol::TRON);
 
         // balance
-        $address = 'TBkjvdApxVoLrL5t5zgJsWZuCgjJXzjTuQ';
-        $address = 'TPQz2D5PddZ1LTiYTRJ9hiy6k8s2qWpmPY';
-        return $service->balance($address, 'TRX', Protocol::TRX);
+        // $address = 'TBkjvdApxVoLrL5t5zgJsWZuCgjJXzjTuQ';// 7754.80656
+        // $address = 'TPQz2D5PddZ1LTiYTRJ9hiy6k8s2qWpmPY';// 4771.4901
+        // $address = 'THrUpDEqju7Gam8dnxzfWQQdFFb9HsPH9k';// 0
+        // $address = 'TNa9syEogs3ZdRQ3iJwATJG2gQBxUqeghf';// 0
+        $address = 'TQAWm9AKHX1M2iHYx9qHxQeWhfyKkq6Abe';// 0
+        return $service->balance($address, 'TRX', Protocol::TRON);
 
         // transfer
         $from = 'TBkjvdApxVoLrL5t5zgJsWZuCgjJXzjTuQ';
         $to = 'TPQz2D5PddZ1LTiYTRJ9hiy6k8s2qWpmPY';
         $number = '1';
-        return $service->transfer($from, $to, $number, 'TRX', Protocol::TRX);
+        return $service->transfer($from, $to, $number, 'TRX', Protocol::TRON);
 
         // blockByNumber
-        return $service->blockByNumber(13030300, 'FUSDT', Protocol::TRX);
+        return $service->blockByNumber(13030300, 'FUSDT', Protocol::TRON);
 
         // blockNumber
-        return $service->blockNumber('TRX', Protocol::TRX);
+        return $service->blockNumber('TRX', Protocol::TRON);
 
         $txHash = '703a6354c0077c8bd9a4de255a73c393d6bee58e0bc55a2f09be64913edec0f6'; //trx
         $txHash = '3f038e528c6da876b51ac4fd4f713f07efaa36add29c0ec05b093a9d98baf952'; //trx20
         // transactionReceipt
-        return $service->transactionReceipt($txHash, 'FUSDT', Protocol::TRX);
+        return $service->transactionReceipt($txHash, 'FUSDT', Protocol::TRON);
 
         // receiptStatus
-        return $service->receiptStatus($txHash, 'FUSDT', Protocol::TRX);
+        return $service->receiptStatus($txHash, 'FUSDT', Protocol::TRON);
 
-        $container = ApplicationContext::getContainer();
-        $exec = $container->get(TaskExecutor::class);
-        $result = $exec->execute(new Task([\App\Task\ETHFundsCollection::class, 'execute']));
-        echo $result;
-        return $this->success($result);
+        
     }
 }
