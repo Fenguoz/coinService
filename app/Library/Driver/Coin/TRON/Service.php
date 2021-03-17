@@ -34,7 +34,13 @@ class Service extends AbstractService
 
     public function newAddress()
     {
-        $address = $this->wallet->generateAddress();
+        try {
+            $address = $this->wallet->generateAddress();
+        } catch (TronErrorException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (TransactionException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        }
         return $this->_notify([
             'mnemonic' => '',
             'key' => $address->privateKey,
@@ -44,7 +50,17 @@ class Service extends AbstractService
 
     public function balance(string $address)
     {
-        $balance = $this->wallet->balance(new Address($address, '', $this->wallet->tron->address2HexString($address)));
+        try {
+            $balance = $this->wallet->balance(new Address(
+                $address,
+                '',
+                $this->wallet->tron->address2HexString($address)
+            ));
+        } catch (TronErrorException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (TransactionException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        }
         return $this->_notify($balance);
     }
 
@@ -65,19 +81,37 @@ class Service extends AbstractService
 
     public function blockNumber()
     {
-        $block = $this->wallet->blockNumber();
+        try {
+            $block = $this->wallet->blockNumber();
+        } catch (TronErrorException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (TransactionException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        }
         return $this->_notify($block->block_header['raw_data']['number']);
     }
 
     public function blockByNumber(int $blockNumber)
     {
-        $block = $this->wallet->blockByNumber($blockNumber);
+        try {
+            $block = $this->wallet->blockByNumber($blockNumber);
+        } catch (TronErrorException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (TransactionException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        }
         return $this->_notify($block->transactions);
     }
 
     public function transactionReceipt(string $txHash)
     {
-        $detail = $this->wallet->transactionReceipt($txHash);
+        try {
+            $detail = $this->wallet->transactionReceipt($txHash);
+        } catch (TronErrorException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (TransactionException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        }
         return $this->_notify($detail);
     }
 

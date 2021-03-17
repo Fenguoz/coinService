@@ -3,10 +3,12 @@
 namespace App\Task;
 
 use App\Constants\Protocol;
+use App\Constants\Setting as ConstantsSetting;
 use App\Model\CoinAddress;
 use App\Model\CoinAddressBlacklist;
 use App\Model\CoinChainConfig;
 use App\Model\CoinFundsCollectionLog;
+use App\Model\Setting;
 use App\Service\CoinService;
 use Exception;
 use Hyperf\Contract\StdoutLoggerInterface;
@@ -29,12 +31,16 @@ class TRONFundsCollection
             return true;
         }
 
+        $tronSetting = Setting::getListByModule(ConstantsSetting::TRON);
+
         bcscale(10);
+        $txFee = $tronSetting['tron_tx_fee'];
+        $txFeeSendType = $tronSetting['tron_tx_fee_send_type']; //手续费发放类型(1全额发放 2补量发放)
         $config = CoinChainConfig::where('protocol', Protocol::TRON)
             ->orderBy('contract_address', 'desc')
             ->get();
         if ($config->isEmpty()) {
-            $this->logger->info(date('Y-m-d H:i:s', time()) . " ETHFundsCollection: Not exist protocol(" . Protocol::$__names[Protocol::TRON] . ")");
+            $this->logger->info(date('Y-m-d H:i:s', time()) . " TRONFundsCollection: Not exist protocol(" . Protocol::$__names[Protocol::TRON] . ")");
             return true;
         }
 
@@ -60,6 +66,21 @@ class TRONFundsCollection
             $address2status[$log->address] = 0; //默认0，防止服务失败
             $receiptStatusResult = (new CoinService)->receiptStatus($log->tx_hash, $log->coin_name, Protocol::TRON);
             if (!$receiptStatusResult || $receiptStatusResult['code'] != 200) {
+                continue;
+            }
+
+            $ret = (new CoinService)->balance($log->address, $log->coin_name, Protocol::TRON);
+            if (!$ret || $ret['code'] != 200) {
+                continue;
+            }
+
+            $balance = $ret['data'];
+            if ($log->type == 2 && $receiptStatusResult['data'] == 1 && $balance < $txFee) {
+                CoinAddressBlacklist::insert([
+                    'protocol' => Protocol::TRON,
+                    'address' => $log->address
+                ]);
+
                 continue;
             }
 
@@ -98,9 +119,47 @@ class TRONFundsCollection
 
                 //归集数量
                 $transferAmount = (int)$ret['data'];
-                echo 'transferAmount:' . $transferAmount . PHP_EOL;
                 if ($transferAmount <= 0 || $transferAmount < $coin2minAmount[$coin]) {
                     continue;
+                }
+                echo 'transferAmount:' . $transferAmount . PHP_EOL;
+
+                // 判断TRC20的手续费
+                if ($coin != 'TRX') {
+                    $ret = (new CoinService)->balance($address, 'TRX', Protocol::TRON);
+                    if (!$ret || $ret['code'] != 200) {
+                        continue;
+                    }
+
+                    $coinBalance = $ret['data'];
+
+                    if ($txFee > $coinBalance) { // Need trx as transaction fee
+                        $transferFeeAmount = ($txFeeSendType == 1) ? $txFee : bcsub((string)$txFee, (string)$coinBalance);
+                        $transferResult = (new CoinService)->transfer(
+                            $coin2sendAddress[$coin],
+                            $address,
+                            $transferFeeAmount,
+                            'TRX',
+                            Protocol::TRON
+                        );
+                        if (!$transferResult || $transferResult['code'] != 200) {
+                            $this->logger->info(date('Y-m-d H:i:s', time()) . "TRONFundsCollection Error: 转账手续费 失败!");
+                            break; //the user done, next one
+                        }
+
+                        $result = CoinFundsCollectionLog::create([
+                            'tx_hash' => $transferResult['data'],
+                            'coin_name' => 'TRX',
+                            'amount' => $transferFeeAmount,
+                            'address' => $address,
+                            'type' => 2,
+                            'protocol' => Protocol::TRON
+                        ]);
+                        if (!$result) {
+                            $this->logger->info(date('Y-m-d H:i:s', time()) . "TRONFundsCollection Error: CoinFundsCollectionLog 添加失败!");
+                        }
+                        break; //the user done, next one
+                    }
                 }
 
                 //归集余额
@@ -112,7 +171,6 @@ class TRONFundsCollection
                     Protocol::TRON
                 );
                 if (!$transferResult || $transferResult['code'] != 200) {
-                    var_dump($transferResult['message']);
                     $this->logger->info(date('Y-m-d H:i:s', time()) . "Error: " . $transferResult['message']);
                     continue;
                 }
@@ -128,6 +186,7 @@ class TRONFundsCollection
                 if (!$result) {
                     $this->logger->info(date('Y-m-d H:i:s', time()) . "TRONFundsCollection Error: CoinFundsCollectionLog 添加失败!");
                 }
+                break; //the user done, next one
             }
         }
 
