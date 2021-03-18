@@ -63,7 +63,7 @@ class Service extends AbstractService
         return $this->_notify($number);
     }
 
-    public function transfer(string $from, string $to, string $amount, string $fromPrivateKey)
+    public function transfer(string $fromPrivateKey, string $to, string $amount)
     {
         $data = $this->eth->transfer(
             $fromPrivateKey,

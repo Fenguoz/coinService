@@ -28,7 +28,12 @@ class CoinService extends BaseService implements CoinServiceInterface
     {
         if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
         try {
-            $data = $this->coin->setAdapter(Protocol::$__names[$protocol], CoinChainConfig::getConfigByCode($coin, $protocol))->newAddress();
+            $data = $this->coin
+                ->setAdapter(
+                    Protocol::$__names[$protocol],
+                    CoinChainConfig::getConfigByCode($coin, $protocol)
+                )
+                ->newAddress();
         } catch (CoinException $e) {
             return $this->error($e->getCode(), $e->getMessage());
         }
@@ -75,7 +80,12 @@ class CoinService extends BaseService implements CoinServiceInterface
         if (!$key) $key = $from;
 
         try {
-            $txHash = $this->coin->setAdapter(Protocol::$__names[$protocol], CoinChainConfig::getConfigByCode($coin, $protocol))->transfer($from, $to, $amount, $key);
+            $txHash = $this->coin
+                ->setAdapter(
+                    Protocol::$__names[$protocol],
+                    CoinChainConfig::getConfigByCode($coin, $protocol)
+                )
+                ->transfer($key, $to, $amount);
         } catch (CoinException $e) {
             return $this->error($e->getCode(), $e->getMessage());
         }

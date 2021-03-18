@@ -25,7 +25,7 @@ abstract class AbstractService
 	/* 获取余额接口 */
 	abstract public function balance(string $address);
 	/* 发起转账接口 */
-	abstract public function transfer(string $from, string $to, string $amount, string $fromPrivateKey);
+	abstract public function transfer(string $fromPrivateKey, string $to, string $amount);
 	/* 获取最新区块高度 */
 	abstract public function blockNumber();
 	/* 根据区块高度获取区块交易 */

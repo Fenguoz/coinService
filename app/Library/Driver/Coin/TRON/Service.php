@@ -64,10 +64,10 @@ class Service extends AbstractService
         return $this->_notify($balance);
     }
 
-    public function transfer(string $from, string $to, string $amount, string $fromPrivateKey)
+    public function transfer(string $fromPrivateKey, string $to, string $amount)
     {
+        $fromAddress = $this->privateKeyToAddress($fromPrivateKey);
         try {
-            $fromAddress = new Address($from, $fromPrivateKey, $this->wallet->tron->address2HexString($from));
             $toAddress = new Address($to, '', $this->wallet->tron->address2HexString($to));
             $tx = $this->wallet->transfer($fromAddress, $toAddress, (float)$amount);
         } catch (TronErrorException $e) {
@@ -122,6 +122,18 @@ class Service extends AbstractService
             return $this->error(0, $data->contractRet);
 
         return $this->_notify(true);
+    }
+
+    public function privateKeyToAddress(string $privateKey)
+    {
+        try {
+            $address = $this->wallet->privateKeyToAddress($privateKey);
+        } catch (TronErrorException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (TransactionException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        }
+        return $this->_notify($address);
     }
 
     public function _return()
