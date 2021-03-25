@@ -23,6 +23,49 @@ class TRONFundsCollection
      */
     private $logger;
 
+    /**
+     * @Inject()
+     * @var CoinService
+     */
+    private $coinService;
+
+    protected $coins = [];
+    protected $coin2minAmount = [];
+    protected $coin2sendAddress = [];
+    protected $coin2recvAddress = [];
+
+    protected $txFee = [];
+    protected $txFeeSendType = [];
+
+    public function init()
+    {
+        $config = CoinChainConfig::where('protocol', Protocol::TRON)
+            ->orderBy('contract_address', 'desc')
+            ->get();
+        if ($config->isEmpty()) {
+            $this->logger->info(date('Y-m-d H:i:s', time()) . " TRONFundsCollection: Not exist protocol(" . Protocol::$__names[Protocol::TRON] . ")");
+            return false;
+        }
+
+        foreach ($config as $v) {
+            $this->coins[] = $v->coin_name;
+            $this->coin2minAmount[$v->coin_name] = $v->funds_collection_min_amount;
+            $this->coin2sendAddress[$v->coin_name] = $v->send_address;
+            $this->coin2recvAddress[$v->coin_name] = $v->recv_address;
+        }
+
+        echo "coin2minAmount:" . json_encode($this->coin2minAmount) . "\n";
+        echo "coin2sendAddress:" . json_encode($this->coin2sendAddress) . "\n";
+        echo "coin2recvAddress:" . json_encode($this->coin2recvAddress) . "\n";
+
+        $tronSetting = Setting::getListByModule(ConstantsSetting::TRON);
+
+        $this->txFee = $tronSetting['tron_tx_fee'];
+        $this->txFeeSendType = $tronSetting['tron_tx_fee_send_type']; //手续费发放类型(1全额发放 2补量发放)
+
+        return true;
+    }
+
     public function execute()
     {
         $this->logger->info(date('Y-m-d H:i:s', time()) . " TRONFundsCollection: start");
@@ -31,71 +74,14 @@ class TRONFundsCollection
             return true;
         }
 
-        $tronSetting = Setting::getListByModule(ConstantsSetting::TRON);
-
         bcscale(10);
-        $txFee = $tronSetting['tron_tx_fee'];
-        $txFeeSendType = $tronSetting['tron_tx_fee_send_type']; //手续费发放类型(1全额发放 2补量发放)
-        $config = CoinChainConfig::where('protocol', Protocol::TRON)
-            ->orderBy('contract_address', 'desc')
-            ->get();
-        if ($config->isEmpty()) {
-            $this->logger->info(date('Y-m-d H:i:s', time()) . " TRONFundsCollection: Not exist protocol(" . Protocol::$__names[Protocol::TRON] . ")");
-            return true;
-        }
 
-        $coins = [];
-        $coin2minAmount = [];
-        $coin2sendAddress = [];
-        $coin2recvAddress = [];
-        foreach ($config as $v) {
-            $coins[] = $v->coin_name;
-            $coin2minAmount[$v->coin_name] = $v->funds_collection_min_amount;
-            $coin2sendAddress[$v->coin_name] = $v->send_address;
-            $coin2recvAddress[$v->coin_name] = $v->recv_address;
+        if (!$this->init()) {
+            return false;
         }
-
-        echo "coin2minAmount:" . json_encode($coin2minAmount) . "\n";
-        echo "coin2sendAddress:" . json_encode($coin2sendAddress) . "\n";
-        echo "coin2recvAddress:" . json_encode($coin2recvAddress) . "\n";
 
         /* 判断上一次归集状态 */
-        $address2status = [];
-        $logs = CoinFundsCollectionLog::where('status', 0)->where('protocol', Protocol::TRON)->get();
-        foreach ($logs as $log) {
-            $address2status[$log->address] = 0; //默认0，防止服务失败
-            $receiptStatusResult = (new CoinService)->receiptStatus($log->tx_hash, $log->coin_name, Protocol::TRON);
-            if (!$receiptStatusResult || $receiptStatusResult['code'] != 200) {
-                continue;
-            }
-
-            $ret = (new CoinService)->balance($log->address, $log->coin_name, Protocol::TRON);
-            if (!$ret || $ret['code'] != 200) {
-                continue;
-            }
-
-            $balance = $ret['data'];
-            if ($log->type == 2 && $receiptStatusResult['data'] == 1 && $balance < $txFee) {
-                CoinAddressBlacklist::insert([
-                    'protocol' => Protocol::TRON,
-                    'address' => $log->address
-                ]);
-
-                continue;
-            }
-
-            $receiptStatus = $receiptStatusResult['data'] ? 1 : -1;
-            $result = CoinFundsCollectionLog::where('tx_hash', $log->tx_hash)->update([
-                'status' => $receiptStatus
-            ]);
-            if (!$result) {
-                continue;
-            }
-
-            $address2status[$log->address] = $receiptStatus;
-        }
-
-        echo "address2status:" . json_encode($address2status) . "\n";
+        $this->lastTime();
 
         /* 归集 */
         $blacklist = CoinAddressBlacklist::where('protocol', Protocol::TRON)
@@ -107,36 +93,41 @@ class TRONFundsCollection
             ->whereNotIn('address', $blacklist)
             ->pluck('address');
         foreach ($data as $address) {
-            if (isset($address2status[$address]) && $address2status[$address] == 0) {
+            if (isset($this->address2status[$address]) && $this->address2status[$address] == 0) {
                 continue;
             }
 
-            foreach ($coins as $coin) {
-                $ret = (new CoinService)->balance($address, $coin, Protocol::TRON);
-                if (!$ret || $ret['code'] != 200) {
-                    continue;
-                }
+            foreach ($this->coins as $coin) {
+                $transferAmount =  $this->getBalance($address, $coin);
 
                 //归集数量
-                $transferAmount = (int)$ret['data'];
-                if ($transferAmount <= 0 || $transferAmount < $coin2minAmount[$coin]) {
+                if ($transferAmount <= 0 || $transferAmount < $this->coin2minAmount[$coin]) {
                     continue;
                 }
+                echo 'address:' . $address . PHP_EOL;
+                echo 'coin:' . $coin . PHP_EOL;
                 echo 'transferAmount:' . $transferAmount . PHP_EOL;
 
                 // 判断TRC20的手续费
                 if ($coin != 'TRX') {
-                    $ret = (new CoinService)->balance($address, 'TRX', Protocol::TRON);
-                    if (!$ret || $ret['code'] != 200) {
-                        continue;
-                    }
+                    $coinBalance = $this->getBalance($address, 'TRX');
+                    if ($this->txFee > $coinBalance) { // Need trx as transaction fee
+                        $transferFeeAmount = ($this->txFeeSendType == 1) ? $this->txFee : bcsub((string)$this->txFee, (string)$coinBalance);
 
-                    $coinBalance = $ret['data'];
+                        // 判断发送地址余额是否充足
+                        $ret = $this->coinService->privateKeyToAddress($this->coin2sendAddress[$coin], 'TRX', Protocol::TRON);
+                        if (!$ret || $ret['code'] != 200) {
+                            continue;
+                        }
+                        $sendAddress = $ret['data']->address;
+                        $sendAddressBalance = $this->getBalance($sendAddress, 'TRX');
+                        if ($transferFeeAmount > $sendAddressBalance) {
+                            $this->logger->info(date('Y-m-d H:i:s', time()) . "TRONFundsCollection Error: 主地址转账手续费不足!");
+                            break;
+                        }
 
-                    if ($txFee > $coinBalance) { // Need trx as transaction fee
-                        $transferFeeAmount = ($txFeeSendType == 1) ? $txFee : bcsub((string)$txFee, (string)$coinBalance);
-                        $transferResult = (new CoinService)->transfer(
-                            $coin2sendAddress[$coin],
+                        $transferResult = $this->coinService->transfer(
+                            $this->coin2sendAddress[$coin],
                             $address,
                             $transferFeeAmount,
                             'TRX',
@@ -163,9 +154,9 @@ class TRONFundsCollection
                 }
 
                 //归集余额
-                $transferResult = (new CoinService)->transfer(
+                $transferResult = $this->coinService->transfer(
                     $address,
-                    $coin2recvAddress[$coin],
+                    $this->coin2recvAddress[$coin],
                     $transferAmount,
                     $coin,
                     Protocol::TRON
@@ -193,4 +184,50 @@ class TRONFundsCollection
         $this->logger->info(date('Y-m-d H:i:s', time()) . " TRONFundsCollection: Done!");
         return true;
     }
+
+
+    protected $address2status = [];
+    /* 判断上一次归集状态 */
+    public function lastTime()
+    {
+        $this->address2status = [];
+        $logs = CoinFundsCollectionLog::where('status', 0)->where('protocol', Protocol::TRON)->get();
+        foreach ($logs as $log) {
+            $address2status[$log->address] = 0; //默认0，防止服务失败
+            $receiptStatusResult = $this->coinService->receiptStatus($log->tx_hash, $log->coin_name, Protocol::TRON);
+            if (!$receiptStatusResult || $receiptStatusResult['code'] != 200) {
+                continue;
+            }
+
+            $balance = $this->getBalance($log->address, $log->coin_name);
+            if ($log->type == 2 && $receiptStatusResult['data'] == 1 && $balance < $this->txFee) {
+                CoinAddressBlacklist::insert([
+                    'protocol' => Protocol::TRON,
+                    'address' => $log->address
+                ]);
+
+                continue;
+            }
+
+            $receiptStatus = $receiptStatusResult['data'] ? 1 : -1;
+            $result = CoinFundsCollectionLog::where('tx_hash', $log->tx_hash)->update([
+                'status' => $receiptStatus
+            ]);
+            if (!$result) {
+                continue;
+            }
+
+            $this->address2status[$log->address] = $receiptStatus;
+        }
+
+        echo "address2status:" . json_encode($this->address2status) . "\n";
+        return true;
+    }
+
+    public function getBalance($address, $coin)
+    {
+        $ret = $this->coinService->balance($address, $coin, Protocol::TRON);
+        return $ret['data'];
+    }
+
 }

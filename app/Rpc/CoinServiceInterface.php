@@ -17,4 +17,6 @@ interface CoinServiceInterface
     public function receiptStatus(string $txHash, string $coin, int $protocol);
 
     public function blockByNumber(int $blockNumber, string $coin, int $protocol);
+
+    public function privateKeyToAddress(string $privateKey, string $coin, int $protocol);
 }
