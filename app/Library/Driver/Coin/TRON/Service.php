@@ -67,8 +67,17 @@ class Service extends AbstractService
     public function transfer(string $fromPrivateKey, string $to, string $amount)
     {
         $fromAddress = $this->privateKeyToAddress($fromPrivateKey);
+        $balance = $this->balance($fromAddress->address);
+        if($balance < $amount){
+            return $this->error(ErrorCode::INSUFFICIENT_BALANCE);
+        }
+
+        $toAddress = new Address($to, '', $this->wallet->tron->address2HexString($to));
+        if(!$toAddress->isValid()){
+            return $this->error(ErrorCode::INVALID_ADDRESS);
+        }
+
         try {
-            $toAddress = new Address($to, '', $this->wallet->tron->address2HexString($to));
             $tx = $this->wallet->transfer($fromAddress, $toAddress, (float)$amount);
         } catch (TronErrorException $e) {
             return $this->error($e->getCode(), $e->getMessage());

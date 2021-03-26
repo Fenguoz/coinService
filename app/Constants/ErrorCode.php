@@ -78,4 +78,13 @@ class ErrorCode extends AbstractConstants
      * @Message("CONFIRM_NOT_ENOUGHT")
      */
     const CONFIRM_NOT_ENOUGHT = 50001;
+
+    /**
+     * @Message("INSUFFICIENT_BALANCE")
+     */
+    const INSUFFICIENT_BALANCE = 50002;
+    /**
+     * @Message("INVALID_ADDRESS")
+     */
+    const INVALID_ADDRESS = 50003;
 }
