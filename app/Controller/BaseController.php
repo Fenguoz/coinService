@@ -9,11 +9,7 @@ use App\Constants\Protocol;
 use Hyperf\Guzzle\ClientFactory;
 use Hyperf\HttpServer\Contract\RequestInterface;
 use Hyperf\HttpServer\Contract\ResponseInterface;
-use Hyperf\Redis\RedisFactory;
 use Psr\Container\ContainerInterface;
-use Hyperf\Utils\ApplicationContext;
-use Hyperf\Task\TaskExecutor;
-use Hyperf\Task\Task;
 
 class BaseController extends AbstractController
 {
@@ -41,7 +37,6 @@ class BaseController extends AbstractController
     public function __construct(ContainerInterface $container)
     {
         $this->container = $container;
-        $this->redis = $container->get(RedisFactory::class)->get('default');
         $this->client = $container->get(ClientFactory::class)->create();
         $this->request = $container->get(RequestInterface::class);
         $this->response = $container->get(ResponseInterface::class);
@@ -86,43 +81,44 @@ class BaseController extends AbstractController
 
     public function index()
     {
-        $container = ApplicationContext::getContainer();
-        $exec = $container->get(TaskExecutor::class);
-        $result = $exec->execute(new Task([\App\Task\TRONFundsCollection::class, 'execute']));
-        return $this->success($result);
-
-
+        $config = [
+            'coin_name' => 'USDT',
+            'rpc_url' => 'https://api.shasta.trongrid.io',
+            'contract_address' => 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+            'decimals' => 6,
+        ];
+        $config = [
+            'coin_name' => 'TRX',
+            'rpc_url' => 'https://api.shasta.trongrid.io',
+        ];
         $service = new \App\Service\CoinService();
+
         // newAddress
-        // return $service->newAddress('TRX', Protocol::TRON);
+        return $service->newAddress($config, Protocol::TRON);
 
         // balance
-        // $address = 'TBkjvdApxVoLrL5t5zgJsWZuCgjJXzjTuQ';// 7754.80656
-        // $address = 'TPQz2D5PddZ1LTiYTRJ9hiy6k8s2qWpmPY';// 4771.4901
-        // $address = 'THrUpDEqju7Gam8dnxzfWQQdFFb9HsPH9k';// 0
-        // $address = 'TNa9syEogs3ZdRQ3iJwATJG2gQBxUqeghf';// 0
-        $address = 'TQAWm9AKHX1M2iHYx9qHxQeWhfyKkq6Abe';// 0
-        return $service->balance($address, 'TRX', Protocol::TRON);
+        $address = 'TBkjvdApxVoLrL5t5zgJsWZuCgjJXzjTuQ';// 7754.80656
+        return $service->balance($address, $config, Protocol::TRON);
 
         // transfer
-        $from = 'TBkjvdApxVoLrL5t5zgJsWZuCgjJXzjTuQ';
-        $to = 'TPQz2D5PddZ1LTiYTRJ9hiy6k8s2qWpmPY';
+        $from = 'TPQz2D5PddZ1LTiYTRJ9hiy6k8s2qWpmPY';
+        $to = 'TBkjvdApxVoLrL5t5zgJsWZuCgjJXzjTuQ';
         $number = '1';
-        return $service->transfer($from, $to, $number, 'TRX', Protocol::TRON);
+        return $service->transfer($from, $to, $number, $config, Protocol::TRON);
 
         // blockByNumber
-        return $service->blockByNumber(13030300, 'FUSDT', Protocol::TRON);
+        return $service->blockByNumber(13030300, $config, Protocol::TRON);
 
         // blockNumber
-        return $service->blockNumber('TRX', Protocol::TRON);
+        return $service->blockNumber($config, Protocol::TRON);
 
         $txHash = '703a6354c0077c8bd9a4de255a73c393d6bee58e0bc55a2f09be64913edec0f6'; //trx
         $txHash = '3f038e528c6da876b51ac4fd4f713f07efaa36add29c0ec05b093a9d98baf952'; //trx20
         // transactionReceipt
-        return $service->transactionReceipt($txHash, 'FUSDT', Protocol::TRON);
+        return $service->transactionReceipt($txHash, $config, Protocol::TRON);
 
         // receiptStatus
-        return $service->receiptStatus($txHash, 'FUSDT', Protocol::TRON);
+        return $service->receiptStatus($txHash, $config, Protocol::TRON);
 
         
     }
