@@ -18,17 +18,22 @@ class Service extends AbstractService
 
     public function __construct($config)
     {
-        if (!$config)
+        if (!$config) {
             return $this->error(ErrorCode::DATA_NOT_EXIST);
+        }
+        if (!isset($this->config['rpc_url'])) {
+            return $this->error(ErrorCode::RPC_URL_REQUIRED);
+        }
+
         $this->config = $config;
 
         $api = new Api(new Client([
             'base_uri' => $this->config['rpc_url'],
         ]));
-        if ($this->config['coin_name'] == 'TRX') {
-            $this->wallet = new TRX($api, $this->config);
-        } else {
+        if (isset($this->config['coin_name']) && $this->config['coin_name'] != 'TRX') {
             $this->wallet = new TRC20($api, $this->config);
+        } else {
+            $this->wallet = new TRX($api, $this->config);
         }
     }
 
@@ -68,12 +73,12 @@ class Service extends AbstractService
     {
         $fromAddress = $this->privateKeyToAddress($fromPrivateKey);
         $balance = $this->balance($fromAddress->address);
-        if($balance < $amount){
+        if ($balance < $amount) {
             return $this->error(ErrorCode::INSUFFICIENT_BALANCE);
         }
 
         $toAddress = new Address($to, '', $this->wallet->tron->address2HexString($to));
-        if(!$toAddress->isValid()){
+        if (!$toAddress->isValid()) {
             return $this->error(ErrorCode::INVALID_ADDRESS);
         }
 

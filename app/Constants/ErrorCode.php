@@ -83,8 +83,29 @@ class ErrorCode extends AbstractConstants
      * @Message("INSUFFICIENT_BALANCE")
      */
     const INSUFFICIENT_BALANCE = 50002;
+
     /**
      * @Message("INVALID_ADDRESS")
      */
     const INVALID_ADDRESS = 50003;
+
+    /**
+     * @Message("RPC_URL_REQUIRED")
+     */
+    const RPC_URL_REQUIRED = 50004;
+
+    /**
+     * @Message("CONTRACT_ADDRESS_REQUIRED")
+     */
+    const CONTRACT_ADDRESS_REQUIRED = 50005;
+
+     /**
+     * @Message("TX_SPEED_ERROR")
+     */
+    const TX_SPEED_ERROR = 50006;
+
+    /**
+     * @Message("DECIMALS_REQUIRED")
+     */
+    const DECIMALS_REQUIRED = 50007;
 }
