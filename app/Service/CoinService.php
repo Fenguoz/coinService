@@ -4,13 +4,11 @@ namespace App\Service;
 
 use App\Constants\ErrorCode;
 use App\Constants\Protocol;
-use App\Exception\BusinessException;
-use App\Model\CoinAddress;
-use App\Model\CoinChainConfig;
-use App\Model\CoinTransfer;
 use App\Rpc\CoinServiceInterface;
 use Driver\Coin\CoinException;
+use Hyperf\Di\Annotation\Inject;
 use Hyperf\RpcServer\Annotation\RpcService;
+use League\Flysystem\Filesystem;
 
 /**
  * @RpcService(name="CoinService", protocol="jsonrpc-http", server="jsonrpc-http", publishTo="consul")
@@ -18,28 +16,31 @@ use Hyperf\RpcServer\Annotation\RpcService;
 class CoinService extends BaseService implements CoinServiceInterface
 {
     /**
+     * @Inject
+     * @var Filesystem
+     */
+    protected $filesystem;
+
+    /**
      * Generate address-related information according to the agreement
      *
-     * @param string $coin  Coin code
-     * @param int $protocol Chian protocol
-     * @return string       address
+     * @param array     $config     Coin config
+     * @param int       $protocol   Chian protocol
+     * @return string   address
      */
-    public function newAddress(string $coin, int $protocol)
+    public function newAddress(array $config, int $protocol)
     {
-        if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
+        $protocolName = $this->getProtocolName($protocol);
         try {
-            $data = $this->coin
-                ->setAdapter(
-                    Protocol::$__names[$protocol],
-                    CoinChainConfig::getConfigByCode($coin, $protocol)
-                )
-                ->newAddress();
+            $data = $this->coin->setAdapter($protocolName, $config)->newAddress();
         } catch (CoinException $e) {
             return $this->error($e->getCode(), $e->getMessage());
         }
-        $result = CoinAddress::insert(array_merge($data, ['protocol' => $protocol]));
-        if (!$result)
-            throw new BusinessException(ErrorCode::ADD_ERROR);
+
+        // 文件储存
+        $file = "coin/address/{$protocolName}/{$data['address']}.txt";
+        $this->filesystem->write($file, json_encode($data));
+
         return $this->success($data['address']);
     }
 
@@ -47,15 +48,15 @@ class CoinService extends BaseService implements CoinServiceInterface
      * Get balance based on address
      *
      * @param string $address   Address to check balance
-     * @param string $coin      Coin code
+     * @param array $config     Coin config
      * @param int   $protocol   Chian protocol
      * @return string
      */
-    public function balance(string $address, string $coin, int $protocol)
+    public function balance(string $address, array $config, int $protocol)
     {
-        if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
+        $protocolName = $this->getProtocolName($protocol);
         try {
-            $number = $this->coin->setAdapter(Protocol::$__names[$protocol], CoinChainConfig::getConfigByCode($coin, $protocol))->balance($address);
+            $number = $this->coin->setAdapter($protocolName, $config)->balance($address);
         } catch (CoinException $e) {
             return $this->error($e->getCode(), $e->getMessage());
         }
@@ -68,38 +69,27 @@ class CoinService extends BaseService implements CoinServiceInterface
      * @param string $from      The source address of the transaction sent
      * @param string $to        Target address of the transaction
      * @param string $amount    Amount of transaction sent
-     * @param string $coin      Coin code
+     * @param array $config     Coin config
      * @param int   $protocol   Chian protocol
      * @return array
      */
-    public function transfer(string $from, string $to, string $amount, string $coin, int $protocol)
+    public function transfer(string $from, string $to, string $amount, array $config, int $protocol)
     {
-        if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
-        $key = CoinAddress::where('address', $from)->value('key');
-        // if (!$key) return $this->error(ErrorCode::DATA_NOT_EXIST);
-        if (!$key) $key = $from;
+        $protocolName = $this->getProtocolName($protocol);
+
+        // Get Key of Address
+        $key = $from;
+        $file = "coin/address/{$protocolName}/{$from}.txt";
+        if ($this->filesystem->has($file)) {
+            $contents = $this->filesystem->read($file);
+            $key = json_decode($contents, true)['key'];
+        }
 
         try {
-            $txHash = $this->coin
-                ->setAdapter(
-                    Protocol::$__names[$protocol],
-                    CoinChainConfig::getConfigByCode($coin, $protocol)
-                )
-                ->transfer($key, $to, $amount);
+            $txHash = $this->coin->setAdapter($protocolName, $config)->transfer($key, $to, $amount);
         } catch (CoinException $e) {
             return $this->error($e->getCode(), $e->getMessage());
         }
-
-        $result = CoinTransfer::create([
-            'tx_hash' => $txHash,
-            'from' => $from,
-            'to' => $to,
-            'protocol' => $protocol,
-            'coin' => $coin,
-            'amount' => $amount,
-        ]);
-        if (!$result)
-            throw new BusinessException(ErrorCode::ADD_ERROR);
 
         return $this->success($txHash);
     }
@@ -107,15 +97,15 @@ class CoinService extends BaseService implements CoinServiceInterface
     /**
      * Returns the number of the latest block
      *
-     * @param string $coin       Coin code
+     * @param array  $config     Coin config
      * @param int    $protocol   Chian protocol
      * @return string
      */
-    public function blockNumber(string $coin, int $protocol)
+    public function blockNumber(array $config, int $protocol)
     {
-        if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
+        $protocolName = $this->getProtocolName($protocol);
         try {
-            $number = $this->coin->setAdapter(Protocol::$__names[$protocol], CoinChainConfig::getConfigByCode($coin, $protocol))->blockNumber();
+            $number = $this->coin->setAdapter($protocolName, $config)->blockNumber();
         } catch (CoinException $e) {
             return $this->error($e->getCode(), $e->getMessage());
         }
@@ -127,15 +117,15 @@ class CoinService extends BaseService implements CoinServiceInterface
      * the transaction.
      *
      * @param string $txHash    Transaction hash
-     * @param string $coin      Coin code
+     * @param array $config     Coin config
      * @param int   $protocol   Chian protocol
      * @return array
      */
-    public function transactionReceipt(string $txHash, string $coin, int $protocol)
+    public function transactionReceipt(string $txHash, array $config, int $protocol)
     {
-        if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
+        $protocolName = $this->getProtocolName($protocol);
         try {
-            $number = $this->coin->setAdapter(Protocol::$__names[$protocol], CoinChainConfig::getConfigByCode($coin, $protocol))->transactionReceipt($txHash);
+            $number = $this->coin->setAdapter($protocolName, $config)->transactionReceipt($txHash);
         } catch (CoinException $e) {
             return $this->error($e->getCode(), $e->getMessage());
         }
@@ -147,15 +137,15 @@ class CoinService extends BaseService implements CoinServiceInterface
      * to specify the transaction.
      *
      * @param string $txHash    Transaction hash
-     * @param string $coin      Coin code
+     * @param array $config     Coin config
      * @param int   $protocol   Chian protocol
      * @return bool
      */
-    public function receiptStatus(string $txHash, string $coin, int $protocol)
+    public function receiptStatus(string $txHash, array $config, int $protocol)
     {
-        if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
+        $protocolName = $this->getProtocolName($protocol);
         try {
-            $ret = $this->coin->setAdapter(Protocol::$__names[$protocol], CoinChainConfig::getConfigByCode($coin, $protocol))->receiptStatus($txHash);
+            $ret = $this->coin->setAdapter($protocolName, $config)->receiptStatus($txHash);
         } catch (CoinException $e) {
             return $this->error($e->getCode(), $e->getMessage());
         }
@@ -166,15 +156,15 @@ class CoinService extends BaseService implements CoinServiceInterface
      * Returns a block of the specified number.
      *
      * @param int       $blockNumber    Block number
-     * @param string    $coin           Coin code
+     * @param array     $config     Coin config
      * @param int       $protocol       Chian protocol
      * @return bool
      */
-    public function blockByNumber(int $blockNumber, string $coin, int $protocol)
+    public function blockByNumber(int $blockNumber, array $config, int $protocol)
     {
-        if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
+        $protocolName = $this->getProtocolName($protocol);
         try {
-            $ret = $this->coin->setAdapter(Protocol::$__names[$protocol], CoinChainConfig::getConfigByCode($coin, $protocol))->blockByNumber($blockNumber);
+            $ret = $this->coin->setAdapter($protocolName, $config)->blockByNumber($blockNumber);
         } catch (CoinException $e) {
             return $this->error($e->getCode(), $e->getMessage());
         }
@@ -185,23 +175,35 @@ class CoinService extends BaseService implements CoinServiceInterface
      * Obtain the address based on the private key
      *
      * @param string    $privateKey     Block number
-     * @param string    $coin           Coin code
+     * @param array     $config         Coin config
      * @param int       $protocol       Chian protocol
      * @return bool
      */
-    public function privateKeyToAddress(string $privateKey, string $coin, int $protocol)
+    public function privateKeyToAddress(string $privateKey, array $config, int $protocol)
     {
-        if (!isset(Protocol::$__names[$protocol])) return $this->error(ErrorCode::DATA_NOT_EXIST);
+        $protocolName = $this->getProtocolName($protocol);
         try {
-            $ret = $this->coin
-                ->setAdapter(
-                    Protocol::$__names[$protocol],
-                    CoinChainConfig::getConfigByCode($coin, $protocol)
-                )
-                ->privateKeyToAddress($privateKey);
+            $ret = $this->coin->setAdapter($protocolName, $config)->privateKeyToAddress($privateKey);
         } catch (CoinException $e) {
             return $this->error($e->getCode(), $e->getMessage());
         }
         return $this->success($ret);
+    }
+
+    /**
+     * Get protocol name
+     *
+     * @param int       $protocol       Chian protocol
+     * @return string   $protocolName
+     */
+    private function getProtocolName(int $protocol): string
+    {
+        $protocolName = isset(Protocol::$__names[$protocol])
+            ? Protocol::$__names[$protocol]
+            : null;
+        if (!$protocolName) {
+            return $this->error(ErrorCode::DATA_NOT_EXIST);
+        }
+        return $protocolName;
     }
 }
