@@ -35,7 +35,7 @@
         "hyperf/amqp": "~2.0.0",
         "nanqi/ethereum-php": "^0.1.0",
         "bitwasp/bitcoin": "^1.0",
-        "fenguoz/tron-php": "^0.1.0",
+        "fenguoz/tron-php": "^1.0",
         "hyperf/consul": "^2.0",
         "hyperf/filesystem": "^2.0"
     },

@@ -19,7 +19,7 @@ class Service extends AbstractService
         if (!$config) {
             return $this->error(ErrorCode::DATA_NOT_EXIST);
         }
-        if (!isset($this->config['rpc_url'])) {
+        if (!isset($config['rpc_url'])) {
             return $this->error(ErrorCode::RPC_URL_REQUIRED);
         }
 
