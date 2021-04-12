@@ -153,11 +153,12 @@ class TRONFundsCollection
                     }
                 }
 
+                $realTransferAmount = bcsub((string)$transferAmount, '0.5', 6);
                 //归集余额
                 $transferResult = $this->coinService->transfer(
                     $address,
                     $this->coin2recvAddress[$coin],
-                    $transferAmount,
+                    $realTransferAmount,
                     $coin,
                     Protocol::TRON
                 );
@@ -169,7 +170,7 @@ class TRONFundsCollection
                 $result = CoinFundsCollectionLog::create([
                     'tx_hash' => $transferResult['data'],
                     'coin_name' => $coin,
-                    'amount' => $transferAmount,
+                    'amount' => $realTransferAmount,
                     'address' => $address,
                     'type' => 1,
                     'protocol' => Protocol::TRON,
