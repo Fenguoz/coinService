@@ -151,9 +151,12 @@ class TRONFundsCollection
                         }
                         break; //the user done, next one
                     }
+
+                    $realTransferAmount = $transferAmount;
+                }else{
+                    $realTransferAmount = bcsub((string)$transferAmount, '0.5', 6);
                 }
 
-                $realTransferAmount = bcsub((string)$transferAmount, '0.5', 6);
                 //归集余额
                 $transferResult = $this->coinService->transfer(
                     $address,
