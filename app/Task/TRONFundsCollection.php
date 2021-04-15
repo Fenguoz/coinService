@@ -112,7 +112,7 @@ class TRONFundsCollection
                 if ($coin != 'TRX') {
                     $coinBalance = $this->getBalance($address, 'TRX');
                     if ($this->txFee > $coinBalance) { // Need trx as transaction fee
-                        $transferFeeAmount = ($this->txFeeSendType == 1) ? $this->txFee : bcsub((string)$this->txFee, (string)$coinBalance);
+                        $transferFeeAmount = ($this->txFeeSendType == 1) ? $this->txFee : bcsub((string)$this->txFee, (string)$coinBalance, 6);
 
                         // 判断发送地址余额是否充足
                         $ret = $this->coinService->privateKeyToAddress($this->coin2sendAddress[$coin], 'TRX', Protocol::TRON);
